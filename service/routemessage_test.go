@@ -22,22 +22,15 @@ import (
 	"testing"
 
 	"github.com/protogalaxy/common/serviceerror"
+	"github.com/protogalaxy/service-message-broker/router/routertest"
 	"github.com/protogalaxy/service-message-broker/service"
 	"golang.org/x/net/context"
 )
 
-type MessageRouterMock struct {
-	OnRoute func(msg []byte) ([]byte, error)
-}
-
-func (m *MessageRouterMock) Route(msg []byte) ([]byte, error) {
-	return m.OnRoute(msg)
-}
-
 func TestRouteMessage(t *testing.T) {
 	s := &service.RouteMessage{
-		Router: &MessageRouterMock{
-			OnRoute: func(msg []byte) ([]byte, error) {
+		Router: &routertest.MessageRouterMock{
+			OnRoute: func(ctx context.Context, msg []byte) ([]byte, error) {
 				if string(msg) != "msg" {
 					t.Errorf("Unexpected routing message: %s", string(msg))
 				}
@@ -65,8 +58,8 @@ func TestRouteMessage(t *testing.T) {
 func TestRouteMessageRoutingError(t *testing.T) {
 	expectedError := errors.New("err")
 	s := &service.RouteMessage{
-		Router: &MessageRouterMock{
-			OnRoute: func(_ []byte) ([]byte, error) {
+		Router: &routertest.MessageRouterMock{
+			OnRoute: func(ctx context.Context, data []byte) ([]byte, error) {
 				return nil, expectedError
 			},
 		},
@@ -138,8 +131,8 @@ func (e ErrorResponseWriter) Write(p []byte) (int, error) {
 
 func TestRouteMessageWriteResponseError(t *testing.T) {
 	s := &service.RouteMessage{
-		Router: &MessageRouterMock{
-			OnRoute: func(msg []byte) ([]byte, error) {
+		Router: &routertest.MessageRouterMock{
+			OnRoute: func(ctx context.Context, msg []byte) ([]byte, error) {
 				return []byte("resp"), nil
 			},
 		},

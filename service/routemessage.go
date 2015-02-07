@@ -20,15 +20,12 @@ import (
 
 	"github.com/arjantop/saola/httpservice"
 	"github.com/protogalaxy/common/serviceerror"
+	"github.com/protogalaxy/service-message-broker/router"
 	"golang.org/x/net/context"
 )
 
-type MessageRouter interface {
-	Route(msg []byte) ([]byte, error)
-}
-
 type RouteMessage struct {
-	Router MessageRouter
+	Router router.MessageRouter
 }
 
 // DoHTTP implements saola.HttpService.
@@ -41,7 +38,7 @@ func (h *RouteMessage) DoHTTP(ctx context.Context, w http.ResponseWriter, r *htt
 		return serviceerror.BadRequest("invalid_request", "Empty request body")
 	}
 
-	resp, err := h.Router.Route(msg)
+	resp, err := h.Router.Route(ctx, msg)
 	if err != nil {
 		return serviceerror.InternalServerError("server_error", "Unable to route the message", err)
 	}

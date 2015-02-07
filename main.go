@@ -17,13 +17,18 @@ package main
 import (
 	"flag"
 	"math/rand"
+	"net/http"
 	_ "net/http/pprof"
 	"time"
 
+	"github.com/arjantop/cuirass"
 	"github.com/arjantop/saola"
 	"github.com/arjantop/saola/httpservice"
+	"github.com/arjantop/vaquita"
 	"github.com/golang/glog"
 	"github.com/protogalaxy/common/serviceerror"
+	"github.com/protogalaxy/service-message-broker/client"
+	"github.com/protogalaxy/service-message-broker/router"
 	"github.com/protogalaxy/service-message-broker/service"
 )
 
@@ -31,10 +36,28 @@ func main() {
 	flag.Parse()
 	rand.Seed(time.Now().UnixNano())
 
+	config := vaquita.NewEmptyMapConfig()
+	exec := cuirass.NewExecutor(config)
+
+	httpClient := &httpservice.Client{
+		Transport: &http.Transport{},
+	}
+
 	endpoint := httpservice.NewEndpoint()
 
+	r := &router.MainRouter{
+		RoomRouter: &router.RoomRouter{
+			GoRoomClient: &client.GoRoomClient{
+				Client:   httpClient,
+				Executor: exec,
+			},
+		},
+	}
+
 	endpoint.POST("/route", saola.Apply(
-		&service.RouteMessage{},
+		&service.RouteMessage{
+			Router: r,
+		},
 		httpservice.NewCancellationFilter(),
 		serviceerror.NewErrorResponseFilter(),
 		serviceerror.NewErrorLoggerFilter()))
