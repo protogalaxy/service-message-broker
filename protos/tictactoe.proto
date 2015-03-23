@@ -1,0 +1,116 @@
+// Copyright (C) 2015 The Protogalaxy Project
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+syntax = "proto3";
+
+package tictactoe;
+
+service GameManager {
+  rpc CreateGame (CreateRequest) returns (CreateReply) {}
+  rpc PlayTurn (TurnRequest) returns (TurnReply) {}
+}
+
+message CreateRequest {
+  repeated string user_ids = 1;
+}
+
+message CreateReply {
+  enum ResponseStatus {
+    SUCCESS = 0;
+  }
+
+  ResponseStatus status = 1;
+  string game_id = 2;
+}
+
+enum Mark {
+  EMPTY = 0;
+  X = 1;
+  Y = 2;
+}
+
+message TurnRequest {
+  message Square {
+    int32 x = 1;
+    int32 y = 2;
+  }
+
+  string game_id = 1;
+  string user_id = 2;
+  int64 move_id = 3;
+  Square move = 4;
+}
+
+message Winner {
+  message Location {
+    enum Direction {
+      HORIZONTAL = 0;
+      VERTICAL = 1;
+      DIAGONAL_DOWN = 2;
+      DIAGONAL_UP = 3;
+    }
+    Direction direction = 1;
+    int32 position = 2;
+  }
+
+  oneof winner_status {
+    bool draw = 1;
+    string user_id = 2;
+  }
+  repeated Location locations = 3;
+}
+
+message TurnReply {
+  enum ResponseStatus {
+    SUCCESS = 0;
+    INVALID_MOVE = 1;
+    NOT_ACTIVE_PLAYER = 2;
+    FINISHED = 3;
+    INVALID_MOVE_ID = 4;
+  }
+
+  ResponseStatus status = 1;
+  int64 move_id = 2;
+}
+
+message MoveRange {
+  int32 from_x = 1;
+  int32 from_y = 2;
+  int32 to_x = 3;
+  int32 to_y = 4;
+}
+
+message Event {
+  enum Type {
+    GAME_CREATED = 0;
+    TURN_PLAYED = 1;
+  }
+  Type type = 1;
+
+  int64 timestamp = 2;
+
+  string game_id = 3;
+  string user_id = 4;
+
+  repeated string user_list = 5;
+
+  TurnRequest.Square move = 6;
+  TurnReply.ResponseStatus turn_status = 7;
+  Winner winner = 8;
+  int64 move_id = 9;
+
+  string next_player = 10;
+  repeated MoveRange valid_moves = 11;
+}

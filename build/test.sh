@@ -45,7 +45,7 @@ echo "mode: count" > "${COVERAGE_FILE}"
 echo "+++ Collecting test coverage ..."
 for dir in `pg::golang::find_test_dirs`; do
   profile="${dir}/coverage.out"
-  godep go test -covermode=count -coverprofile="${profile}" "${dir}"
+  go test -covermode=count -coverprofile="${profile}" "${dir}"
   if [[ -f $profile ]]; then
     cat "${profile}" | tail -n +2 >> ${COVERAGE_FILE}
     rm "${profile}"

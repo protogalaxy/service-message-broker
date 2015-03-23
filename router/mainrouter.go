@@ -17,9 +17,10 @@ package router
 
 import (
 	"encoding/json"
-	"strings"
+	"errors"
 
-	"golang.org/x/net/context"
+	"github.com/protogalaxy/service-message-broker/Godeps/_workspace/src/golang.org/x/net/context"
+	"github.com/protogalaxy/service-message-broker/tictactoe"
 )
 
 type MessageRouter interface {
@@ -29,29 +30,66 @@ type MessageRouter interface {
 var _ MessageRouter = (*MainRouter)(nil)
 
 type MainRouter struct {
-	RoomRouter MessageRouter
+	Client tictactoe.GameManagerClient
 }
 
-type Message struct {
-	Type string          `json:"type"`
-	ID   string          `json:"id"`
-	Data json.RawMessage `json:"data"`
+type MessageType struct {
+	Type string `json:"type"`
 }
 
 func (r *MainRouter) Route(ctx context.Context, data []byte) ([]byte, error) {
-	var msg Message
-	err := json.Unmarshal(data, &msg)
+	var t MessageType
+	err := json.Unmarshal(data, &t)
 	if err != nil {
 		return nil, err
 	}
-	return r.routeType(ctx, &msg)
+	return r.routeByType(ctx, t.Type, data)
 }
 
-func (r *MainRouter) routeType(ctx context.Context, msg *Message) ([]byte, error) {
-	switch strings.SplitN(msg.Type, ".", 2)[0] {
-	case "room":
-		return r.RoomRouter.Route(ctx, msg.Data)
-	default:
-		panic("unknown message")
+type CreateGame struct {
+	WithUser string `json:"with_user"`
+}
+
+type Turn struct {
+	GameID string `json:"game_id"`
+	MoveID int64  `json:"move_id"`
+	Move   struct {
+		X int `json:"x"`
+		Y int `json:"y"`
+	} `json:"move"`
+}
+
+func (r *MainRouter) routeByType(ctx context.Context, t string, data []byte) ([]byte, error) {
+	switch t {
+	case "create":
+		var createGame CreateGame
+		err := json.Unmarshal(data, &createGame)
+		if err != nil {
+			return nil, err
+		}
+
+		_, err = r.Client.CreateGame(ctx, &tictactoe.CreateRequest{
+			UserIds: []string{"", createGame.WithUser},
+		})
+		if err != nil {
+			return nil, err
+		}
+	case "turn":
+		var turn Turn
+		err := json.Unmarshal(data, &turn)
+		if err != nil {
+			return nil, err
+		}
+
+		_, err = r.Client.PlayTurn(ctx, &tictactoe.TurnRequest{
+			UserId: "",
+			GameId: turn.GameID,
+			MoveId: turn.MoveID,
+			Move: &tictactoe.TurnRequest_Square{
+				X: int32(turn.Move.X),
+				Y: int32(turn.Move.Y),
+			},
+		})
 	}
+	return nil, errors.New("unknown message type")
 }

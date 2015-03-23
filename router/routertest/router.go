@@ -15,7 +15,7 @@
 
 package routertest
 
-import "golang.org/x/net/context"
+import "github.com/protogalaxy/service-message-broker/Godeps/_workspace/src/golang.org/x/net/context"
 
 type MessageRouterMock struct {
 	OnRoute func(ctx context.Context, data []byte) ([]byte, error)

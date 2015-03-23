@@ -17,52 +17,42 @@ package main
 import (
 	"flag"
 	"math/rand"
-	"net/http"
+	"net"
 	_ "net/http/pprof"
 	"time"
 
-	"github.com/arjantop/cuirass"
-	"github.com/arjantop/saola"
-	"github.com/arjantop/saola/httpservice"
-	"github.com/arjantop/vaquita"
-	"github.com/golang/glog"
-	"github.com/protogalaxy/common/serviceerror"
-	"github.com/protogalaxy/service-message-broker/client"
+	"github.com/protogalaxy/service-message-broker/Godeps/_workspace/src/github.com/golang/glog"
+	"github.com/protogalaxy/service-message-broker/Godeps/_workspace/src/google.golang.org/grpc"
+	"github.com/protogalaxy/service-message-broker/messagebroker"
 	"github.com/protogalaxy/service-message-broker/router"
-	"github.com/protogalaxy/service-message-broker/service"
+	"github.com/protogalaxy/service-message-broker/tictactoe"
 )
 
 func main() {
 	flag.Parse()
 	rand.Seed(time.Now().UnixNano())
 
-	config := vaquita.NewEmptyMapConfig()
-	exec := cuirass.NewExecutor(config)
+	conn, err := grpc.Dial("localhost:9091")
+	if err != nil {
+		glog.Fatalf("could not connect: %v", err)
+	}
+	defer conn.Close()
+	tttc := tictactoe.NewGameManagerClient(conn)
 
-	httpClient := &httpservice.Client{
-		Transport: &http.Transport{},
+	socket, err := net.Listen("tcp", ":9090")
+	if err != nil {
+		glog.Fatalf("failed to listen: %v", err)
 	}
 
-	endpoint := httpservice.NewEndpoint()
-
-	r := &router.MainRouter{
-		RoomRouter: &router.RoomRouter{
-			GoRoomClient: &client.GoRoomClient{
-				Client:   httpClient,
-				Executor: exec,
-			},
-		},
+	router := &router.MainRouter{
+		Client: tttc,
 	}
 
-	endpoint.POST("/route", saola.Apply(
-		&service.RouteMessage{
-			Router: r,
-		},
-		httpservice.NewCancellationFilter(),
-		serviceerror.NewErrorResponseFilter(),
-		serviceerror.NewErrorLoggerFilter()))
+	broker := &messagebroker.Broker{
+		Router: router,
+	}
 
-	glog.Fatal(httpservice.Serve(":10400", saola.Apply(
-		endpoint,
-		httpservice.NewStdRequestLogFilter())))
+	grpcServer := grpc.NewServer()
+	messagebroker.RegisterBrokerServer(grpcServer, broker)
+	grpcServer.Serve(socket)
 }
