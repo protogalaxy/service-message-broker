@@ -34,7 +34,7 @@ mkdir -p "${TARGET_TEST_COVERAGE}"
 
 echo "+++ Running tests ..."
 for dir in `pg::golang::find_test_dirs`; do
-  GORACE="halt_on_error=1" godep go test -v -race "${dir}"
+  GORACE="halt_on_error=1" go test -v -race "${dir}"
 done
 
 readonly COVERAGE_FILE="${TARGET_TEST_COVERAGE}/coverage.out"

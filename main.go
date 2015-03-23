@@ -32,7 +32,7 @@ func main() {
 	flag.Parse()
 	rand.Seed(time.Now().UnixNano())
 
-	conn, err := grpc.Dial("localhost:9091")
+	conn, err := grpc.Dial("localhost:9093")
 	if err != nil {
 		glog.Fatalf("could not connect: %v", err)
 	}
